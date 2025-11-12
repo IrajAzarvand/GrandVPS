@@ -1,0 +1,30 @@
+document.addEventListener("DOMContentLoaded",async()=>{const pricingContainer=document.getElementById("pricing-container");pricingContainer.innerHTML=`
+        <p style="text-align:center; color:#00ffd0;">
+            در حال بارگذاری تعرفه‌ها...
+        </p>
+    `;try{const response=await fetch("/get_pricing/");if(!response.ok)throw new Error("خطا در دریافت تعرفه‌ها");const plans=await response.json();if(!plans||plans.length===0){pricingContainer.innerHTML=`
+                <p style="text-align:center; color:#ff3c3c;">
+                    هیچ پلنی یافت نشد 😕
+                </p>`;return;}
+pricingContainer.innerHTML=plans.map((plan,index)=>{const isPopular=index===1;return`
+            <div class="pricing-card ${isPopular ? 'popular' : ''} lazy-load">
+                <div class="pricing-header">
+                    <h3 class="pricing-name">${plan.name}</h3>
+                    <div class="price">${plan.monthly_price_toman.toLocaleString()} <span>تومان/ماه</span></div>
+                </div>
+                <ul class="pricing-features">
+                    <li><i class="fas fa-check"></i> ${plan.cpu} هسته پردازنده</li>
+                    <li><i class="fas fa-check"></i> ${plan.ram_gb} گیگابایت رم</li>
+                    <li><i class="fas fa-check"></i> ${plan.ssd_gb} گیگابایت فضای SSD</li>
+                    <li><i class="fas fa-check"></i> ترافیک ${plan.traffic_gb === 'نامحدود' ? 'نامحدود' : plan.traffic_gb + ' گیگابایت'}</li>
+                    <li><i class="fas fa-check"></i> پشتیبانی ۲۴/۷</li>
+                </ul>
+                <a href="#order" class="btn btn-primary">خرید پلن</a>
+            </div>
+        `}).join("");const lazyObserver=new IntersectionObserver((entries)=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');lazyObserver.unobserve(entry.target);}});},{rootMargin:'0px 0px 100px 0px'});document.querySelectorAll(".pricing-card").forEach(card=>{lazyObserver.observe(card);});}catch(error){console.error("❌ خطا در دریافت تعرفه‌ها:",error);pricingContainer.innerHTML=`
+            <p style="text-align:center; color:#ff3c3c;">
+                خطا در بارگذاری تعرفه‌ها 😔
+            </p>`;}
+const allLazyElements=document.querySelectorAll('.lazy-load');const globalLazyObserver=new IntersectionObserver((entries)=>{entries.forEach(entry=>{if(entry.isIntersecting){if(entry.target.tagName==='IMG'&&entry.target.hasAttribute('data-src')){entry.target.src=entry.target.getAttribute('data-src');entry.target.removeAttribute('data-src');}
+entry.target.classList.add('visible');globalLazyObserver.unobserve(entry.target);}});},{rootMargin:'0px 0px 100px 0px'});allLazyElements.forEach(element=>{globalLazyObserver.observe(element);});const header=document.getElementById('header');if(header){window.addEventListener('scroll',function(){if(window.scrollY>100){header.classList.add('scrolled');}else{header.classList.remove('scrolled');}});}
+const mobileMenuBtn=document.querySelector('.mobile-menu-btn');const nav=document.querySelector('nav ul');if(mobileMenuBtn&&nav){mobileMenuBtn.addEventListener('click',function(){nav.classList.toggle('active');});}});;

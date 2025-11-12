@@ -1,0 +1,79 @@
+{% extends 'main_template.html' %}
+
+{% block title %}Transaction History - GrandVPS{% endblock %}
+
+{% block content %}
+<section class="hero" style="padding: 8rem 5% 4rem; min-height: auto;">
+    <div class="container" style="max-width: 1200px; margin: 0 auto;">
+        <h1 style="text-align: center; margin-bottom: 2rem;">تاریخچه تراکنش ها</h1>
+
+        <!-- Wallet Balance Summary -->
+        <div class="feature-card" style="max-width: 400px; margin: 0 auto 3rem; text-align: center;">
+            <h3>موجودی فعلی</h3>
+            <div class="price" style="font-size: 2rem; margin: 1rem 0;">
+                ${{ wallet.balance }}
+            </div>
+            <a href="{% url 'wallet:wallet_dashboard' %}" class="btn btn-primary">بازگشت به کیف پول</a>
+        </div>
+
+        <!-- Transaction History Table -->
+        <div class="feature-card">
+            <h3 style="text-align: center; margin-bottom: 2rem;">تمام تراکنش ها</h3>
+            {% if transactions %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-light);">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 1rem; text-align: right;">شناسه تراکنش</th>
+                                <th style="padding: 1rem; text-align: right;">نوع تراکنش</th>
+                                <th style="padding: 1rem; text-align: right;">مبلغ</th>
+                                <th style="padding: 1rem; text-align: right;">وضعیت</th>
+                                <th style="padding: 1rem; text-align: right;">تاریخ</th>
+                                <th style="padding: 1rem; text-align: right;">توضیحات</th>
+                                <th style="padding: 1rem; text-align: right;">مرجع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 1rem;">{{ transaction.id }}</td>
+                                    <td style="padding: 1rem;">
+                                        {% if transaction.transaction_type == 'deposit' %}
+                                            <i class="fas fa-plus" style="color: var(--neon-green); margin-left: 0.5rem;"></i>افزایش موجودی
+                                        {% elif transaction.transaction_type == 'withdraw' %}
+                                            <i class="fas fa-minus" style="color: #ff6b6b; margin-left: 0.5rem;"></i>برداشت
+                                        {% elif transaction.transaction_type == 'payment' %}
+                                            <i class="fas fa-credit-card" style="color: #4ecdc4; margin-left: 0.5rem;"></i>پرداخت
+                                        {% else %}
+                                            {{ transaction.get_transaction_type_display }}
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 1rem;">${{ transaction.amount }}</td>
+                                    <td style="padding: 1rem;">
+                                        {% if transaction.status == 'completed' %}
+                                            <span style="color: var(--neon-green);"><i class="fas fa-check-circle"></i> تکمیل شده</span>
+                                        {% elif transaction.status == 'pending' %}
+                                            <span style="color: #ffa500;"><i class="fas fa-clock"></i> در انتظار</span>
+                                        {% elif transaction.status == 'failed' %}
+                                            <span style="color: #ff6b6b;"><i class="fas fa-times-circle"></i> ناموفق</span>
+                                        {% elif transaction.status == 'cancelled' %}
+                                            <span style="color: #888;"><i class="fas fa-ban"></i> لغو شده</span>
+                                        {% else %}
+                                            {{ transaction.get_status_display }}
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 1rem;">{{ transaction.timestamp|date:"Y/m/d H:i:s" }}</td>
+                                    <td style="padding: 1rem;">{{ transaction.description|default:"-" }}</td>
+                                    <td style="padding: 1rem;">{{ transaction.reference_id|default:"-" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p style="text-align: center; color: var(--text-muted); padding: 2rem;">هیچ تراکنشی یافت نشد.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,446 @@
+{% extends "main_template.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}پنل کاربری - سرویس ابری{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="user-profile">
+                <div class="user-avatar">{{ user.get_full_name|slice:":2"|default:user.username|slice:":2"|upper }}</div>
+                <div class="user-info">
+                    <h3>{{ user.get_full_name|default:user.username }}</h3>
+                    <p>کاربر سیستم</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard:dashboard' %}" class="nav-item active">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>داشبورد</span>
+            </a>
+            <a href="{% url 'vps:dashboard' %}" class="nav-item">
+                <i class="fas fa-server"></i>
+                <span>سرویس‌های من</span>
+            </a>
+            <a href="{% url 'billing:history' %}" class="nav-item">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>صورتحساب‌ها</span>
+            </a>
+            <a href="{% url 'wallet:dashboard' %}" class="nav-item">
+                <i class="fas fa-wallet"></i>
+                <span>کیف پول</span>
+            </a>
+            <a href="{% url 'dashboard:profile' %}" class="nav-item">
+                <i class="fas fa-user-circle"></i>
+                <span>پروفایل</span>
+            </a>
+            <a href="{% url 'dashboard:settings' %}" class="nav-item">
+                <i class="fas fa-cog"></i>
+                <span>تنظیمات</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-headset"></i>
+                <span>پشتیبانی</span>
+            </a>
+            <a href="{% url 'accounts:logout' %}" class="nav-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>خروج</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h1>پنل کاربری</h1>
+                    <p>مدیریت حساب و سرویس‌های میزبانی</p>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon toggle-icon" id="themeIcon"></i>
+                    <span class="toggle-text" id="themeText">&nbsp;</span>
+                </div>
+
+                <div class="notification-bell">
+                    <i class="fas fa-bell"></i>
+                    {% if pending_invoices_count > 0 %}
+                    <span class="notification-badge">{{ pending_invoices_count }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="user-menu">
+                    <span>{{ user.get_full_name|default:user.username }}</span>
+                    <div class="user-avatar" style="width: 40px; height: 40px; font-size: 1rem;">{{ user.get_full_name|slice:":2"|default:user.username|slice:":2"|upper }}</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">موجودی کیف پول</div>
+                        <div class="stat-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ wallet_balance|floatformat:0|intcomma }} <small>تومان</small></div>
+                    <div class="stat-change {% if low_balance_warning %}negative{% endif %}">
+                        {% if low_balance_warning %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>موجودی کم</span>
+                        {% else %}
+                        <i class="fas fa-check-circle"></i>
+                        <span>وضعیت مناسب</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">سرویس‌های فعال</div>
+                        <div class="stat-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ active_vps_count }}</div>
+                    <div class="stat-change">
+                        <i class="fas fa-info-circle"></i>
+                        <span>از {{ total_vps_count }} سرویس</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">صورتحساب جاری</div>
+                        <div class="stat-icon">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ monthly_cost|floatformat:0|intcomma }} <small>تومان</small></div>
+                    <div class="stat-change">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>ماهانه</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">اعلان‌ها</div>
+                        <div class="stat-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ pending_invoices_count }}</div>
+                    <div class="stat-change">
+                        {% if upcoming_expirations > 0 %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>{{ upcoming_expirations }} انقضا نزدیک</span>
+                        {% else %}
+                        <i class="fas fa-check-circle"></i>
+                        <span>همه چیز مرتب</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="section-title">
+                <h2><i class="fas fa-bolt"></i> عملیات سریع</h2>
+            </div>
+
+            <div class="quick-actions">
+                <a href="{% url 'vps:create' %}" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h3>سرویس جدید</h3>
+                    <p>ایجاد VPS جدید</p>
+                </a>
+                <a href="{% url 'wallet:deposit' %}" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <h3>شارژ کیف پول</h3>
+                    <p>افزایش موجودی</p>
+                </a>
+                <a href="{% url 'billing:history' %}" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <h3>صورتحساب‌ها</h3>
+                    <p>مشاهده و پرداخت</p>
+                </a>
+                <a href="{% url 'dashboard:settings' %}" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h3>تنظیمات</h3>
+                    <p>مدیریت حساب</p>
+                </a>
+            </div>
+
+            <!-- Services Section -->
+            <div class="section-title">
+                <h2><i class="fas fa-server"></i> سرویس‌های اخیر</h2>
+            </div>
+
+            <div class="services-grid">
+                {% for vps in recent_vps %}
+                <div class="service-card">
+                    <div class="service-header">
+                        <h3 class="service-name">{{ vps.name }}</h3>
+                        <span class="service-status status-{{ vps.status }}">
+                            {% if vps.status == 'active' %}فعال{% elif vps.status == 'pending' %}در انتظار{% elif vps.status == 'suspended' %}معلق{% else %}نامشخص{% endif %}
+                        </span>
+                    </div>
+                    <div class="service-details">
+                        <div class="service-detail">
+                            <span>پلن:</span>
+                            <span>{{ vps.plan.name }}</span>
+                        </div>
+                        <div class="service-detail">
+                            <span>IP:</span>
+                            <span>{{ vps.ip_address|default:'در حال تخصیص' }}</span>
+                        </div>
+                        <div class="service-detail">
+                            <span>تاریخ ایجاد:</span>
+                            <span>{{ vps.created_at|date:'Y/m/d' }}</span>
+                        </div>
+                        <div class="service-detail">
+                            <span>انقضا:</span>
+                            <span>{{ vps.expires_at|date:'Y/m/d' }}</span>
+                        </div>
+                    </div>
+                    <div class="service-actions">
+                        <a href="{% url 'vps:detail' vps.id %}" class="btn btn-primary btn-sm">مدیریت</a>
+                        <a href="{% url 'vps:monitoring' vps.id %}" class="btn btn-outline btn-sm">مانیتورینگ</a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-server"></i>
+                    <h3>هیچ سرویسی یافت نشد</h3>
+                    <p>برای شروع، یک سرویس VPS جدید ایجاد کنید.</p>
+                    <a href="{% url 'vps:create' %}" class="btn btn-primary">ایجاد سرویس</a>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="section-title">
+                <h2><i class="fas fa-history"></i> فعالیت‌های اخیر</h2>
+            </div>
+
+            <div class="activity-list">
+                {% for transaction in recent_transactions %}
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        {% if transaction.transaction_type == 'deposit' %}
+                        <i class="fas fa-plus-circle" style="color: var(--neon-green);"></i>
+                        {% elif transaction.transaction_type == 'withdrawal' %}
+                        <i class="fas fa-minus-circle" style="color: #ff4757;"></i>
+                        {% else %}
+                        <i class="fas fa-exchange-alt" style="color: var(--electric-blue);"></i>
+                        {% endif %}
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">
+                            {% if transaction.transaction_type == 'deposit' %}
+                            واریز به کیف پول
+                            {% elif transaction.transaction_type == 'withdrawal' %}
+                            برداشت از کیف پول
+                            {% else %}
+                            تراکنش {{ transaction.transaction_type }}
+                            {% endif %}
+                        </div>
+                        <div class="activity-desc">
+                            مبلغ: {{ transaction.amount|floatformat:0|intcomma }} تومان
+                            {% if transaction.description %} - {{ transaction.description }}{% endif %}
+                        </div>
+                        <div class="activity-time">{{ transaction.created_at|timesince }} پیش</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">فعالیتی یافت نشد</div>
+                        <div class="activity-desc">هنوز هیچ تراکنشی انجام نشده است.</div>
+                        <div class="activity-time">-</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Quick Actions */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.action-card {
+    background: linear-gradient(145deg, rgba(30, 30, 46, 0.8) 0%, rgba(21, 21, 34, 0.8) 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: var(--text-light);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 170, 255, 0.15);
+    backdrop-filter: blur(10px);
+    text-align: center;
+}
+
+.action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 170, 255, 0.15);
+}
+
+.action-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(145deg, var(--dark-blue) 0%, var(--electric-blue) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    margin: 0 auto 1rem;
+    box-shadow: 0 0 15px rgba(0, 170, 255, 0.4);
+}
+
+.action-card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-light);
+}
+
+.action-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Empty State */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    background: linear-gradient(145deg, rgba(30, 30, 46, 0.8) 0%, rgba(21, 21, 34, 0.8) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 170, 255, 0.15);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+/* Dashboard Wrapper */
+.dashboard-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--primary-black);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .quick-actions {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Theme toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Mobile menu toggle
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+
+    if (mobileMenuToggle && sidebar) {
+        mobileMenuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 1024) {
+                if (!sidebar.contains(event.target) && !mobileMenuToggle.contains(event.target)) {
+                    sidebar.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    if (themeToggle && themeIcon && themeText) {
+        // Check for saved theme preference or default to dark
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+
+        // Apply the saved theme on page load
+        if (currentTheme === 'light') {
+            document.body.classList.add('light-mode');
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+            themeText.textContent = '';
+        }
+
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('light-mode');
+
+            if (document.body.classList.contains('light-mode')) {
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+                themeText.textContent = '';
+                localStorage.setItem('theme', 'light');
+            } else {
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+                themeText.textContent = '';
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

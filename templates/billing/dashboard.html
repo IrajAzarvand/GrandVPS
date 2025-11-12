@@ -1,0 +1,134 @@
+{% extends 'main_template.html' %}
+
+{% block title %}Billing Dashboard - GrandVPS{% endblock %}
+
+{% block content %}
+<section class="hero" style="padding: 8rem 5% 4rem; min-height: auto;">
+    <div class="container" style="max-width: 1200px; margin: 0 auto;">
+        <h1 style="text-align: center; margin-bottom: 2rem;">Billing Dashboard</h1>
+
+        <!-- Wallet Balance and Renewal Status -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; max-width: 1000px; margin: 0 auto 3rem;">
+            <div class="feature-card" style="text-align: center;">
+                <div class="feature-icon" style="margin: 0 auto 1rem;">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <h3>Wallet Balance</h3>
+                <div class="price" style="font-size: 2rem; margin: 1rem 0;">
+                    ${{ wallet_balance }}
+                </div>
+            </div>
+
+            <div class="feature-card" style="text-align: center;">
+                <div class="feature-icon" style="margin: 0 auto 1rem;">
+                    {% if renewal_check.sufficient %}
+                        <i class="fas fa-check-circle" style="color: var(--neon-green);"></i>
+                    {% else %}
+                        <i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i>
+                    {% endif %}
+                </div>
+                <h3>Renewal Status</h3>
+                <p style="margin: 1rem 0;">
+                    {% if renewal_check.sufficient %}
+                        Sufficient balance for renewal
+                    {% else %}
+                        Insufficient balance - ${{ renewal_check.required_balance }} needed
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Recent Billing Cycles -->
+        <div class="feature-card" style="max-width: 1000px; margin: 0 auto 3rem;">
+            <h3 style="text-align: center; margin-bottom: 2rem;">Recent Billing Cycles</h3>
+            {% if billing_cycles %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-light);">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 1rem; text-align: left;">Period</th>
+                                <th style="padding: 1rem; text-align: left;">Amount</th>
+                                <th style="padding: 1rem; text-align: left;">Status</th>
+                                <th style="padding: 1rem; text-align: left;">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cycle in billing_cycles %}
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 1rem;">{{ cycle.start_date }} - {{ cycle.end_date }}</td>
+                                    <td style="padding: 1rem;">${{ cycle.amount }}</td>
+                                    <td style="padding: 1rem;">
+                                        {% if cycle.status == 'paid' %}
+                                            <span style="color: var(--neon-green);">Paid</span>
+                                        {% elif cycle.status == 'unpaid' %}
+                                            <span style="color: #ffa500;">Unpaid</span>
+                                        {% elif cycle.status == 'overdue' %}
+                                            <span style="color: #ff6b6b;">Overdue</span>
+                                        {% else %}
+                                            {{ cycle.get_status_display }}
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 1rem;">{{ cycle.created_at|date:"Y/m/d" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p style="text-align: center; color: var(--text-muted);">No billing cycles found.</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent Invoices -->
+        <div class="feature-card" style="max-width: 1000px; margin: 0 auto;">
+            <h3 style="text-align: center; margin-bottom: 2rem;">Recent Invoices</h3>
+            {% if invoices %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-light);">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 1rem; text-align: left;">Invoice #</th>
+                                <th style="padding: 1rem; text-align: left;">Amount</th>
+                                <th style="padding: 1rem; text-align: left;">Status</th>
+                                <th style="padding: 1rem; text-align: left;">Due Date</th>
+                                <th style="padding: 1rem; text-align: left;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in invoices %}
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 1rem;">{{ invoice.invoice_number }}</td>
+                                    <td style="padding: 1rem;">${{ invoice.amount }}</td>
+                                    <td style="padding: 1rem;">
+                                        {% if invoice.status == 'paid' %}
+                                            <span style="color: var(--neon-green);">Paid</span>
+                                        {% elif invoice.status == 'sent' %}
+                                            <span style="color: #ffa500;">Sent</span>
+                                        {% elif invoice.status == 'overdue' %}
+                                            <span style="color: #ff6b6b;">Overdue</span>
+                                        {% else %}
+                                            {{ invoice.get_status_display }}
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 1rem;">{{ invoice.due_date|date:"Y/m/d" }}</td>
+                                    <td style="padding: 1rem;">
+                                        <a href="{% url 'billing:invoice_detail' invoice.id %}" class="btn btn-outline btn-sm">View</a>
+                                        {% if invoice.pdf_file %}
+                                            <a href="{% url 'billing:download_invoice' invoice.id %}" class="btn btn-primary btn-sm">Download PDF</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="text-align: center; margin-top: 2rem;">
+                    <a href="{% url 'billing:history' %}" class="btn btn-outline">View All Billing History</a>
+                </div>
+            {% else %}
+                <p style="text-align: center; color: var(--text-muted);">No invoices found.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

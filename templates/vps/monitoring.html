@@ -1,0 +1,767 @@
+{% extends "main_template.html" %}
+{% load static %}
+
+{% block title %}مانیتورینگ - {{ vps.name }}{% endblock %}
+
+{% block content %}
+<div class="profile-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="user-profile">
+                <div class="user-avatar">{{ user.get_full_name|slice:":2"|default:user.username|slice:":2"|upper }}</div>
+                <div class="user-info">
+                    <h3>{{ user.get_full_name|default:user.username }}</h3>
+                    <p>کاربر سیستم</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard:dashboard' %}" class="nav-item">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>داشبورد</span>
+            </a>
+            <a href="{% url 'vps:dashboard' %}" class="nav-item">
+                <i class="fas fa-server"></i>
+                <span>سرویس‌های من</span>
+            </a>
+            <a href="{% url 'billing:history' %}" class="nav-item">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>صورتحساب‌ها</span>
+            </a>
+            <a href="{% url 'wallet:dashboard' %}" class="nav-item">
+                <i class="fas fa-wallet"></i>
+                <span>کیف پول</span>
+            </a>
+            <a href="{% url 'dashboard:profile' %}" class="nav-item">
+                <i class="fas fa-user-circle"></i>
+                <span>پروفایل</span>
+            </a>
+            <a href="{% url 'dashboard:settings' %}" class="nav-item">
+                <i class="fas fa-cog"></i>
+                <span>تنظیمات</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-headset"></i>
+                <span>پشتیبانی</span>
+            </a>
+            <a href="{% url 'accounts:logout' %}" class="nav-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>خروج</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h1>مانیتورینگ سرویس</h1>
+                    <p>{{ vps.name }} - {{ vps.instance_id }}</p>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <a href="{% url 'vps:dashboard' %}" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i>
+                    بازگشت
+                </a>
+                <button class="btn btn-primary" onclick="refreshMonitoring()">
+                    <i class="fas fa-sync-alt"></i>
+                    بروزرسانی
+                </button>
+                <div class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon toggle-icon" id="themeIcon"></i>
+                    <span class="toggle-text" id="themeText">&nbsp;</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Monitoring Content -->
+        <div class="dashboard-content">
+            {% if monitoring_data.error %}
+            <div class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>خطا در دریافت داده‌ها</h3>
+                <p>{{ monitoring_data.error }}</p>
+                <button class="btn btn-primary" onclick="refreshMonitoring()">
+                    <i class="fas fa-sync-alt"></i>
+                    تلاش مجدد
+                </button>
+            </div>
+            {% else %}
+            <!-- Status Overview -->
+            <div class="status-overview">
+                <div class="status-card">
+                    <div class="status-icon">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>وضعیت سرویس</h3>
+                        <span class="status-badge status-{{ vps.status }}">
+                            {% if vps.status == 'active' %}فعال{% elif vps.status == 'stopped' %}متوقف{% elif vps.status == 'pending' %}در انتظار{% else %}{{ vps.status|title }}{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>آخرین بروزرسانی</h3>
+                        <span class="status-time" id="last-checked">هم اکنون</span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>IP آدرس</h3>
+                        <span class="status-ip">{{ vps.ip_address|default:'در حال تخصیص' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Metrics -->
+            <div class="metrics-grid">
+                <!-- CPU Usage -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <h3>استفاده از CPU</h3>
+                        <div class="metric-icon">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                    </div>
+                    <div class="metric-value">
+                        <span class="percentage">{{ monitoring_data.status.cpu_percent|default:'0' }}%</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ monitoring_data.status.cpu_percent|default:'0' }}%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-details">
+                        <span>هسته: {{ vps.plan.cpu_cores }}</span>
+                    </div>
+                </div>
+
+                <!-- Memory Usage -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <h3>استفاده از رم</h3>
+                        <div class="metric-icon">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                    </div>
+                    <div class="metric-value">
+                        <span class="percentage">{{ monitoring_data.status.memory_percent|default:'0' }}%</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ monitoring_data.status.memory_percent|default:'0' }}%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-details">
+                        <span>{{ vps.plan.ram_gb }} GB کل</span>
+                    </div>
+                </div>
+
+                <!-- Disk Usage -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <h3>استفاده از دیسک</h3>
+                        <div class="metric-icon">
+                            <i class="fas fa-hdd"></i>
+                        </div>
+                    </div>
+                    <div class="metric-value">
+                        <span class="percentage">{{ monitoring_data.status.disk_percent|default:'0' }}%</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ monitoring_data.status.disk_percent|default:'0' }}%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-details">
+                        <span>{{ vps.plan.disk_gb }} GB کل</span>
+                    </div>
+                </div>
+
+                <!-- Network Traffic -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <h3>ترافیک شبکه</h3>
+                        <div class="metric-icon">
+                            <i class="fas fa-network-wired"></i>
+                        </div>
+                    </div>
+                    <div class="metric-value">
+                        <span class="traffic-amount">{{ monitoring_data.traffic.monthly_gb|default:'0' }} GB</span>
+                        <div class="traffic-limit">از {{ vps.plan.bandwidth_gb }} GB</div>
+                    </div>
+                    <div class="metric-details">
+                        <span>ماه جاری</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Information -->
+            <div class="network-info">
+                <h2 class="section-title">
+                    <i class="fas fa-network-wired"></i>
+                    اطلاعات شبکه
+                </h2>
+
+                <div class="network-grid">
+                    <div class="network-card">
+                        <h4>وضعیت اتصال</h4>
+                        <div class="network-status">
+                            {% if monitoring_data.network.status == 'up' %}
+                            <span class="status-online">
+                                <i class="fas fa-circle"></i>
+                                آنلاین
+                            </span>
+                            {% else %}
+                            <span class="status-offline">
+                                <i class="fas fa-circle"></i>
+                                آفلاین
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="network-card">
+                        <h4>داده دریافتی</h4>
+                        <div class="network-data">{{ monitoring_data.network.bytes_received|default:'0' }} MB</div>
+                    </div>
+
+                    <div class="network-card">
+                        <h4>داده ارسالی</h4>
+                        <div class="network-data">{{ monitoring_data.network.bytes_sent|default:'0' }} MB</div>
+                    </div>
+
+                    <div class="network-card">
+                        <h4>میانگین روزانه</h4>
+                        <div class="network-data">{{ monitoring_data.traffic.daily_average|default:'0' }} GB</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Information -->
+            <div class="system-info">
+                <h2 class="section-title">
+                    <i class="fas fa-cogs"></i>
+                    اطلاعات سیستم
+                </h2>
+
+                <div class="system-details">
+                    <div class="detail-row">
+                        <span class="detail-label">سیستم عامل:</span>
+                        <span class="detail-value">{{ monitoring_data.status.os|default:'-' }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">کرنل:</span>
+                        <span class="detail-value">{{ monitoring_data.status.kernel|default:'-' }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">آپتایم:</span>
+                        <span class="detail-value">{{ monitoring_data.status.uptime|default:'-' }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">لود اوریج:</span>
+                        <span class="detail-value">{{ monitoring_data.status.load_average|default:'-' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <h2 class="section-title">
+                    <i class="fas fa-bolt"></i>
+                    عملیات سریع
+                </h2>
+
+                <div class="actions-grid">
+                    {% if vps.status == 'active' %}
+                    <button class="action-btn stop-btn" onclick="stopVPS('{{ vps.id }}')">
+                        <i class="fas fa-stop"></i>
+                        <span>توقف سرویس</span>
+                    </button>
+                    <button class="action-btn restart-btn" onclick="restartVPS('{{ vps.id }}')">
+                        <i class="fas fa-redo"></i>
+                        <span>ریستارت</span>
+                    </button>
+                    {% elif vps.status == 'stopped' %}
+                    <button class="action-btn start-btn" onclick="startVPS('{{ vps.id }}')">
+                        <i class="fas fa-play"></i>
+                        <span>شروع سرویس</span>
+                    </button>
+                    {% endif %}
+                    <button class="action-btn reboot-btn" onclick="rebootVPS('{{ vps.id }}')">
+                        <i class="fas fa-power-off"></i>
+                        <span>راه‌اندازی مجدد</span>
+                    </button>
+                    <a href="{% url 'vps:detail' vps.instance_id %}" class="action-btn manage-btn">
+                        <i class="fas fa-cog"></i>
+                        <span>مدیریت کامل</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Error Message */
+.error-message {
+    text-align: center;
+    padding: 3rem;
+    background: linear-gradient(145deg, rgba(255, 71, 87, 0.1) 0%, rgba(30, 30, 46, 0.8) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 71, 87, 0.3);
+    margin-bottom: 2rem;
+}
+
+.error-message i {
+    font-size: 3rem;
+    color: #ff4757;
+    margin-bottom: 1rem;
+}
+
+.error-message h3 {
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.error-message p {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+/* Status Overview */
+.status-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.status-card {
+    background: linear-gradient(145deg, rgba(30, 30, 46, 0.8) 0%, rgba(21, 21, 34, 0.8) 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(0, 170, 255, 0.15);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, var(--electric-blue) 0%, var(--neon-green) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.status-info h3 {
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-active {
+    background: rgba(0, 255, 157, 0.2);
+    color: var(--neon-green);
+}
+
+.status-stopped {
+    background: rgba(108, 117, 125, 0.2);
+    color: #6c757d;
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.status-time, .status-ip {
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: linear-gradient(145deg, rgba(30, 30, 46, 0.8) 0%, rgba(21, 21, 34, 0.8) 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(0, 170, 255, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.metric-header h3 {
+    color: var(--text-light);
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.metric-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(145deg, var(--dark-blue) 0%, var(--electric-blue) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+}
+
+.metric-value {
+    margin-bottom: 1rem;
+}
+
+.percentage, .traffic-amount {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--neon-green);
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-green) 0%, var(--electric-blue) 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.traffic-limit {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.metric-details {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* Network Info */
+.network-info, .system-info, .quick-actions {
+    margin-bottom: 2rem;
+}
+
+.network-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.network-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.network-card h4 {
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.network-status .status-online {
+    color: var(--neon-green);
+}
+
+.network-status .status-offline {
+    color: #ff4757;
+}
+
+.network-data {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+/* System Details */
+.system-details {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: var(--text-muted);
+}
+
+.detail-value {
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* Actions */
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid rgba(0, 170, 255, 0.3);
+    background: transparent;
+    color: var(--text-light);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.action-btn:hover {
+    background: var(--electric-blue);
+    color: var(--primary-black);
+    transform: translateY(-2px);
+}
+
+.action-btn.stop-btn:hover {
+    background: #ff4757;
+    border-color: #ff4757;
+}
+
+.action-btn.start-btn:hover {
+    background: var(--neon-green);
+    border-color: var(--neon-green);
+}
+
+.action-btn i {
+    font-size: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .status-overview, .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .network-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+
+<script>
+// Monitoring functions
+async function startVPS(vpsId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید این VPS را شروع کنید؟')) {
+        try {
+            const response = await fetch(`/vps/${vpsId}/start/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('خطا در شروع VPS');
+            }
+        } catch (error) {
+            alert('خطا در ارتباط با سرور');
+        }
+    }
+}
+
+async function stopVPS(vpsId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید این VPS را متوقف کنید؟')) {
+        try {
+            const response = await fetch(`/vps/${vpsId}/stop/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('خطا در توقف VPS');
+            }
+        } catch (error) {
+            alert('خطا در ارتباط با سرور');
+        }
+    }
+}
+
+async function restartVPS(vpsId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید این VPS را ریستارت کنید؟')) {
+        try {
+            const response = await fetch(`/vps/${vpsId}/restart/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('خطا در ریستارت VPS');
+            }
+        } catch (error) {
+            alert('خطا در ارتباط با سرور');
+        }
+    }
+}
+
+async function rebootVPS(vpsId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید این VPS را راه‌اندازی مجدد کنید؟')) {
+        try {
+            const response = await fetch(`/vps/${vpsId}/reboot/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('خطا در راه‌اندازی مجدد VPS');
+            }
+        } catch (error) {
+            alert('خطا در ارتباط با سرور');
+        }
+    }
+}
+
+function refreshMonitoring() {
+    location.reload();
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshMonitoring, 30000);
+
+// Theme toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Mobile menu toggle
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+
+    if (mobileMenuToggle && sidebar) {
+        mobileMenuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 1024) {
+                if (!sidebar.contains(event.target) && !mobileMenuToggle.contains(event.target)) {
+                    sidebar.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    if (themeToggle && themeIcon && themeText) {
+        // Check for saved theme preference or default to dark
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+
+        // Apply the saved theme on page load
+        if (currentTheme === 'light') {
+            document.body.classList.add('light-mode');
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+            themeText.textContent = '';
+        }
+
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('light-mode');
+
+            if (document.body.classList.contains('light-mode')) {
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+                themeText.textContent = '';
+                localStorage.setItem('theme', 'light');
+            } else {
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+                themeText.textContent = '';
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

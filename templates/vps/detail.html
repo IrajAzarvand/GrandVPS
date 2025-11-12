@@ -1,0 +1,284 @@
+{% extends 'main_template.html' %}
+
+{% block title %}VPS Details - {{ vps.instance_id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        VPS Instance: {{ vps.instance_id }}
+                        <span class="badge {% if vps.status == 'active' %}bg-success{% elif vps.status == 'stopped' %}bg-secondary{% elif vps.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %} ms-2">
+                            {{ vps.status|title }}
+                        </span>
+                    </h3>
+                    <div class="float-end">
+                        <a href="{% url 'vps:dashboard' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Dashboard
+                        </a>
+                        <a href="{% url 'vps:monitoring' vps.instance_id %}" class="btn btn-info btn-sm">
+                            <i class="fas fa-chart-line"></i> Monitoring
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- VPS Information -->
+                        <div class="col-md-6">
+                            <h5>VPS Information</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Instance ID:</strong></td>
+                                    <td><code>{{ vps.instance_id }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Plan:</strong></td>
+                                    <td>{{ vps.plan.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        {% if vps.status == 'active' %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% elif vps.status == 'stopped' %}
+                                            <span class="badge bg-secondary">Stopped</span>
+                                        {% elif vps.status == 'pending' %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% elif vps.status == 'suspended' %}
+                                            <span class="badge bg-danger">Suspended</span>
+                                        {% else %}
+                                            <span class="badge bg-dark">{{ vps.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>IP Address:</strong></td>
+                                    <td>
+                                        {% if vps.ip_address %}
+                                            <code>{{ vps.ip_address }}</code>
+                                        {% else %}
+                                            <span class="text-muted">Not assigned yet</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Created:</strong></td>
+                                    <td>{{ vps.created_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Expires:</strong></td>
+                                    <td>{{ vps.expires_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Plan Specifications -->
+                        <div class="col-md-6">
+                            <h5>Plan Specifications</h5>
+                            <div class="row text-center">
+                                <div class="col-3">
+                                    <div class="spec-item">
+                                        <i class="fas fa-microchip fa-2x text-primary mb-2"></i>
+                                        <h6>{{ vps.plan.cpu_cores }}</h6>
+                                        <small class="text-muted">CPU Cores</small>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="spec-item">
+                                        <i class="fas fa-memory fa-2x text-success mb-2"></i>
+                                        <h6>{{ vps.plan.ram_gb }}GB</h6>
+                                        <small class="text-muted">RAM</small>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="spec-item">
+                                        <i class="fas fa-hdd fa-2x text-warning mb-2"></i>
+                                        <h6>{{ vps.plan.disk_gb }}GB</h6>
+                                        <small class="text-muted">SSD</small>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="spec-item">
+                                        <i class="fas fa-wifi fa-2x text-info mb-2"></i>
+                                        <h6>{{ vps.plan.bandwidth_gb }}GB</h6>
+                                        <small class="text-muted">Bandwidth</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- VPS Management Actions -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h5>VPS Management</h5>
+                            <div class="row">
+                                <!-- Start/Stop/Restart Actions -->
+                                <div class="col-md-8">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">Power Controls</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <form id="vps-action-form" method="post" action="{% url 'vps:action' vps.instance_id %}">
+                                                {% csrf_token %}
+                                                <div class="row">
+                                                    <div class="col-md-4 mb-3">
+                                                        <button type="button" class="btn btn-success btn-lg w-100 vps-action-btn"
+                                                                data-action="start" {% if vps.status == 'active' %}disabled{% endif %}>
+                                                            <i class="fas fa-play"></i> Start
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <button type="button" class="btn btn-warning btn-lg w-100 vps-action-btn"
+                                                                data-action="restart">
+                                                            <i class="fas fa-redo"></i> Restart
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <button type="button" class="btn btn-danger btn-lg w-100 vps-action-btn"
+                                                                data-action="stop" {% if vps.status == 'stopped' %}disabled{% endif %}>
+                                                            <i class="fas fa-stop"></i> Stop
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Quick Actions -->
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">Quick Actions</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-outline-primary" disabled>
+                                                    <i class="fas fa-camera"></i> Create Snapshot
+                                                </button>
+                                                <button class="btn btn-outline-secondary" disabled>
+                                                    <i class="fas fa-list"></i> View Snapshots
+                                                </button>
+                                                <button class="btn btn-outline-info" disabled>
+                                                    <i class="fas fa-terminal"></i> Console Access
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Result Modal -->
+<div class="modal fade" id="actionResultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Action Result</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="actionResultBody">
+                <!-- Result will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.spec-item {
+    padding: 1rem;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    margin-bottom: 1rem;
+}
+
+.vps-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+</style>
+
+<script>
+document.querySelectorAll('.vps-action-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        if (this.disabled) return;
+
+        const action = this.dataset.action;
+        const form = document.getElementById('vps-action-form');
+        const formData = new FormData(form);
+
+        // Add action to form data
+        formData.append('action', action);
+
+        // Disable all buttons during request
+        document.querySelectorAll('.vps-action-btn').forEach(function(b) {
+            b.disabled = true;
+            b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        });
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const modal = new bootstrap.Modal(document.getElementById('actionResultModal'));
+            const modalBody = document.getElementById('actionResultBody');
+
+            if (data.success) {
+                modalBody.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> ${data.message}
+                    </div>
+                `;
+                // Reload page after 2 seconds to show updated status
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> ${data.message}
+                    </div>
+                `;
+            }
+
+            modal.show();
+        })
+        .catch(error => {
+            const modal = new bootstrap.Modal(document.getElementById('actionResultModal'));
+            const modalBody = document.getElementById('actionResultBody');
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> An error occurred. Please try again.
+                </div>
+            `;
+            modal.show();
+        })
+        .finally(() => {
+            // Re-enable buttons
+            document.querySelectorAll('.vps-action-btn').forEach(function(b) {
+                b.disabled = false;
+                b.innerHTML = b.textContent.trim();
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

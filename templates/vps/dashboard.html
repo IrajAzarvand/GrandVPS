@@ -1,0 +1,488 @@
+{% extends "main_template.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}سرویس‌های VPS - سرویس ابری{% endblock %}
+
+{% block content %}
+<div class="profile-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="user-profile">
+                <div class="user-avatar">{{ user.get_full_name|slice:":2"|default:user.username|slice:":2"|upper }}</div>
+                <div class="user-info">
+                    <h3>{{ user.get_full_name|default:user.username }}</h3>
+                    <p>کاربر سیستم</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard:dashboard' %}" class="nav-item">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>داشبورد</span>
+            </a>
+            <a href="{% url 'vps:dashboard' %}" class="nav-item active">
+                <i class="fas fa-server"></i>
+                <span>سرویس‌های من</span>
+            </a>
+            <a href="{% url 'billing:history' %}" class="nav-item">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>صورتحساب‌ها</span>
+            </a>
+            <a href="{% url 'wallet:dashboard' %}" class="nav-item">
+                <i class="fas fa-wallet"></i>
+                <span>کیف پول</span>
+            </a>
+            <a href="{% url 'dashboard:profile' %}" class="nav-item">
+                <i class="fas fa-user-circle"></i>
+                <span>پروفایل</span>
+            </a>
+            <a href="{% url 'dashboard:settings' %}" class="nav-item">
+                <i class="fas fa-cog"></i>
+                <span>تنظیمات</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fas fa-headset"></i>
+                <span>پشتیبانی</span>
+            </a>
+            <a href="{% url 'accounts:logout' %}" class="nav-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>خروج</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <button class="mobile-menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h1>سرویس‌های VPS</h1>
+                    <p>مدیریت و مانیتورینگ سرویس‌های مجازی</p>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <a href="{% url 'vps:create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i>
+                    سرویس جدید
+                </a>
+                <div class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon toggle-icon" id="themeIcon"></i>
+                    <span class="toggle-text" id="themeText">&nbsp;</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- VPS Content -->
+        <div class="dashboard-content">
+            <!-- Search and Filters -->
+            <div class="vps-controls">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="جستجو در سرویس‌ها..." id="vpsSearch">
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">همه ({{ total_vps }})</button>
+                    <button class="filter-btn" data-filter="active">فعال ({{ active_vps }})</button>
+                    <button class="filter-btn" data-filter="stopped">متوقف</button>
+                    <button class="filter-btn" data-filter="pending">در انتظار</button>
+                </div>
+            </div>
+
+            <!-- VPS Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">کل سرویس‌ها</div>
+                        <div class="stat-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ total_vps }}</div>
+                    <div class="stat-change">
+                        <i class="fas fa-info-circle"></i>
+                        <span>سرویس ثبت شده</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">سرویس‌های فعال</div>
+                        <div class="stat-icon">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ active_vps }}</div>
+                    <div class="stat-change">
+                        <i class="fas fa-check-circle"></i>
+                        <span>در حال اجرا</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">هزینه ماهانه</div>
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ monthly_cost|floatformat:0|intcomma }} <small>تومان</small></div>
+                    <div class="stat-change">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>بر اساس پلن‌ها</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">منقضی شدن نزدیک</div>
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ expiring_soon_count }}</div>
+                    <div class="stat-change">
+                        <i class="fas fa-clock"></i>
+                        <span>۷ روز آینده</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VPS Services Grid -->
+            <div class="services-grid" id="vpsGrid">
+                {% for vps in vps_instances %}
+                <div class="service-card vps-card" data-status="{{ vps.status }}" data-name="{{ vps.name|lower }}">
+                    <div class="service-header">
+                        <h3 class="service-name">{{ vps.name }}</h3>
+                        <span class="service-status status-{{ vps.status }}">
+                            {% if vps.status == 'active' %}فعال{% elif vps.status == 'stopped' %}متوقف{% elif vps.status == 'pending' %}در انتظار{% elif vps.status == 'suspended' %}معلق{% else %}{{ vps.status|title }}{% endif %}
+                        </span>
+                    </div>
+                    <div class="service-details">
+                        <div class="service-detail">
+                            <span>پلن:</span>
+                            <span>{{ vps.plan.name }}</span>
+                        </div>
+                        <div class="service-detail">
+                            <span>IP:</span>
+                            <span>{{ vps.ip_address|default:'در حال تخصیص' }}</span>
+                        </div>
+                        <div class="service-detail">
+                            <span>انقضا:</span>
+                            <span>{{ vps.expires_at|date:'Y/m/d' }}</span>
+                        </div>
+                        <div class="service-detail">
+                            <span>منطقه:</span>
+                            <span>{{ vps.region|default:'-' }}</span>
+                        </div>
+                    </div>
+                    <div class="service-actions">
+                        <button class="btn btn-primary btn-sm" onclick="viewVPS('{{ vps.id }}')">
+                            <i class="fas fa-eye"></i> مشاهده
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="monitorVPS('{{ vps.id }}')">
+                            <i class="fas fa-chart-line"></i> مانیتورینگ
+                        </button>
+                        {% if vps.status == 'active' %}
+                        <button class="btn btn-outline btn-sm" onclick="stopVPS('{{ vps.id }}')">
+                            <i class="fas fa-stop"></i> توقف
+                        </button>
+                        {% elif vps.status == 'stopped' %}
+                        <button class="btn btn-outline btn-sm" onclick="startVPS('{{ vps.id }}')">
+                            <i class="fas fa-play"></i> شروع
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-server"></i>
+                    <h3>هیچ سرویسی یافت نشد</h3>
+                    <p>شما هنوز هیچ سرویس VPS ای ایجاد نکرده‌اید.</p>
+                    <a href="{% url 'vps:create' %}" class="btn btn-primary">ایجاد اولین سرویس</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* VPS Controls */
+.vps-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.search-box i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 45px 12px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 25px;
+    color: var(--text-light);
+    font-size: 1rem;
+}
+
+.light-mode .search-box input {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--border-light);
+    color: var(--text-dark);
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--electric-blue);
+    box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.2);
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(0, 170, 255, 0.3);
+    background: transparent;
+    color: var(--text-light);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.light-mode .filter-btn {
+    color: var(--text-dark);
+    border-color: var(--border-light);
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+    background: var(--electric-blue);
+    color: var(--primary-black);
+    border-color: var(--electric-blue);
+}
+
+/* VPS Card Enhancements */
+.vps-card {
+    transition: all 0.3s ease;
+}
+
+.vps-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 170, 255, 0.15);
+}
+
+/* Status specific styling */
+.status-active {
+    background: rgba(0, 255, 157, 0.2);
+    color: var(--neon-green);
+}
+
+.status-stopped {
+    background: rgba(108, 117, 125, 0.2);
+    color: #6c757d;
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.status-suspended {
+    background: rgba(255, 71, 87, 0.2);
+    color: #ff4757;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .vps-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-box {
+        max-width: 100%;
+    }
+
+    .filter-buttons {
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+// VPS management functions
+function viewVPS(vpsId) {
+    window.location.href = `/vps/detail/${vpsId}/`;
+}
+
+function monitorVPS(vpsId) {
+    window.location.href = `/vps/monitoring/${vpsId}/`;
+}
+
+async function startVPS(vpsId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید این VPS را شروع کنید؟')) {
+        try {
+            const response = await fetch(`/vps/${vpsId}/start/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('خطا در شروع VPS');
+            }
+        } catch (error) {
+            alert('خطا در ارتباط با سرور');
+        }
+    }
+}
+
+async function stopVPS(vpsId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید این VPS را متوقف کنید؟')) {
+        try {
+            const response = await fetch(`/vps/${vpsId}/stop/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('خطا در توقف VPS');
+            }
+        } catch (error) {
+            alert('خطا در ارتباط با سرور');
+        }
+    }
+}
+
+// Search and filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('vpsSearch');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const vpsCards = document.querySelectorAll('.vps-card');
+
+    // Search functionality
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+
+        vpsCards.forEach(card => {
+            const name = card.dataset.name;
+            const isVisible = name.includes(searchTerm);
+            card.style.display = isVisible ? 'block' : 'none';
+        });
+    });
+
+    // Filter functionality
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const filter = this.dataset.filter;
+
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Filter cards
+            vpsCards.forEach(card => {
+                const status = card.dataset.status;
+                if (filter === 'all' || status === filter) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Mobile menu toggle
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+
+    if (mobileMenuToggle && sidebar) {
+        mobileMenuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 1024) {
+                if (!sidebar.contains(event.target) && !mobileMenuToggle.contains(event.target)) {
+                    sidebar.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    if (themeToggle && themeIcon && themeText) {
+        // Check for saved theme preference or default to dark
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+
+        // Apply the saved theme on page load
+        if (currentTheme === 'light') {
+            document.body.classList.add('light-mode');
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+            themeText.textContent = '';
+        }
+
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('light-mode');
+
+            if (document.body.classList.contains('light-mode')) {
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+                themeText.textContent = '';
+                localStorage.setItem('theme', 'light');
+            } else {
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+                themeText.textContent = '';
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
